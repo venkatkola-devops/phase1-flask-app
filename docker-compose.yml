@@ -1,0 +1,55 @@
+# ============================================================
+# DOCKER-COMPOSE — What this file does:
+# If the Dockerfile is a blueprint for ONE container,
+# docker-compose is the blueprint for your WHOLE SYSTEM.
+# This file starts both the Flask app AND the MySQL database,
+# makes them talk to each other, and wires up the ports.
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ---- SERVICE 1: Our Flask web app ----
+  web:
+    build: .                   # Build using the Dockerfile in this folder
+    container_name: flask_app
+    ports:
+      - "5000:5000"            # HOST:CONTAINER — visit http://localhost:5000
+    environment:
+      # These are the "environment variables" the app reads in app.py
+      # NEVER hardcode passwords in code — use env vars like this
+      DB_HOST: db              # "db" is the name of the other service below
+      DB_USER: flaskuser
+      DB_PASSWORD: flaskpass
+      DB_NAME: flaskdb
+    depends_on:
+      db:
+        condition: service_healthy   # Wait for MySQL to be READY before starting Flask
+    restart: unless-stopped    # Auto-restart if the container crashes
+
+  # ---- SERVICE 2: MySQL database ----
+  db:
+    image: mysql:8.0           # Pull the official MySQL image from Docker Hub
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword   # Root password (for admin use)
+      MYSQL_DATABASE: flaskdb             # Auto-creates this database on first run
+      MYSQL_USER: flaskuser               # Creates this user
+      MYSQL_PASSWORD: flaskpass           # With this password
+    volumes:
+      # Named volume = your data SURVIVES even if the container is deleted
+      - mysql_data:/var/lib/mysql
+      # This SQL file runs automatically on first start (creates our table)
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      # Docker checks this command to know if MySQL is ACTUALLY ready
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uflaskuser", "-pflaskpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ---- VOLUMES ----
+# Named volumes persist data between container restarts
+volumes:
+  mysql_data:
