@@ -15,7 +15,7 @@ services:
     build: .                   # Build using the Dockerfile in this folder
     container_name: flask_app
     ports:
-      - "5000:5000"            # HOST:CONTAINER — visit http://localhost:5000
+      - "8080:5000"            # HOST:CONTAINER — visit http://localhost:8080
     environment:
       # These are the "environment variables" the app reads in app.py
       # NEVER hardcode passwords in code — use env vars like this
